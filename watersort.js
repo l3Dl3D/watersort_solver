@@ -31,6 +31,10 @@ let solveGame = (() => {
         constructor(bottles) {
             this.bottles = bottles;
         }
+
+        toString() {
+            return JSON.stringify(this.bottles);
+        }
         
         *getMoves() {
             // source iterate
@@ -70,21 +74,10 @@ let solveGame = (() => {
                 }
             }
         }
-
-        toString() {
-            return JSON.stringify(this.bottles);
-        }
-    };
-    
-    class Game {
-        constructor(board) {
-            this.board = board;
-            // boards without solution
-            this.noSolution = new Set()
-        }
+        
         playMove(move) {
-            let src = this.board.bottles[move.i];
-            let dst = this.board.bottles[move.j];
+            let src = this.bottles[move.i];
+            let dst = this.bottles[move.j];
             if(dst.waters.length == 0) {
                 let water = src.waters.pop();
                 src.size -= water.height;
@@ -108,12 +101,33 @@ let solveGame = (() => {
                 dst.size += water1.height + water2.height;
             }
         }
+        
         isWin() {
-            const res = this.board.bottles.every((bottle) => {
+            const res = this.bottles.every((bottle) => {
                 return (bottle.waters.length < 2) && (bottle.size == 0 || bottle.size == MAX_SIZE);
             });
             
             return res;
+        }
+        
+        countEmpty() {
+            return this.bottles.map((bottle) => {
+                return +(bottle.waters.length == 0);
+            }).reduce((a, b) => {return a + b});
+        }
+        
+        createBoardFromMove(move) {
+            let board = new Board(JSON.parse(this.toString()));
+            board.playMove(move);
+            return board;
+        }
+    };
+    
+    class Game {
+        constructor(board) {
+            this.board = board;
+            // boards without solution
+            this.noSolution = new Set()
         }
         
         solve(r) {
@@ -125,13 +139,14 @@ let solveGame = (() => {
             
             const moves = [...this.board.getMoves()];
             shuffleArray(moves); // seems to speed things up sometimes!
+            moves.sort((move) => {return this.board.createBoardFromMove(move).countEmpty()});
             
             for(const move of moves) {
                 const boardJSON = this.board.toString();
                 
                 // console.log(`${r}: in move`, move);
-                this.playMove(move);
-                if(this.isWin()) {
+                this.board.playMove(move);
+                if(this.board.isWin()) {
                     return [move];
                 }
                 
@@ -150,7 +165,7 @@ let solveGame = (() => {
     }
     
     let game = new Game(new Board(bottles));
-    let moves = game.solve(300);
+    let moves = game.solve(350);
     if(moves == null) {
         console.log('no solution!!!');
     } else {
@@ -169,6 +184,3 @@ let solveGame = (() => {
 
 solveGame();
 
-/*
-1000738
-*/
